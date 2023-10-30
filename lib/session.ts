@@ -4,8 +4,8 @@ import { AdapterUser } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
 import jsonwebtoken from 'jsonwebtoken'
 import { JWT } from "next-auth/jwt";
-import { SessionInterface } from "@/common.types";
-
+import { SessionInterface,UserProfile } from "@/common.types";
+import { getUser,createUser } from "./action";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -14,36 +14,71 @@ export const authOptions: NextAuthOptions = {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!
        }) 
     ],
-    // jwt: {
-    //     encode: ({secret, token}) => {
+    jwt: {
+        encode: ({secret, token}) => {
+           const encodedToken = 
+           jsonwebtoken.sign({
+            ...token,
+            iss: 'grafbase',
+            exp: Math.floor(Date.now() / 1000) + 60*60
+           }, secret)
+           
+           return encodedToken;
+        },
+        decode: ({secret, token}) => {
+            const decodedToken = 
+            jsonwebtoken.verify(token!, secret) as JWT;
 
-    //     },
-    //     decode: ({secret, token}) => {
-
-    //     }
-    // },
+            return decodedToken;
+        }
+    },
     theme: {
         colorScheme: "light",
         logo: "/logo.svg"
     },
-    // callbacks:{
-    //     async session({session}) {
-    //         return session;
-    //     },
-    //     async signIn({user}: {user: AdapterUser | User}){
-    //         try{
-    //             //get user if they exist
+    callbacks:{
+        async session({session}) {
+            const email = session?.user?.email as string;
 
+            try{
+                const data = await getUser(email) as {user?: UserProfile}
 
-    //             //create user if not exist
+                const newSession = {
+                    ...session,
+                    user: {
+                        ...session.user,
+                        ...data?.user
+                    }
+                }
+                return newSession;
+            }
+            catch(error){
+               console.log(error) 
+               return session;
+            }
+        },
+        
+        async signIn({user}: {user: AdapterUser | User}){
+            try{
+                //get user if they exist
+                const userExists = await getUser(user?.email as string) as {user?: UserProfile}
 
-    //             //return true
-    //         }
-    //         catch(error: any){
-    //             return false;
-    //         }
-    //     }
-    //}
+                //create user if not exist
+                if(!userExists.user){
+                    await createUser(
+                        user.name as string,
+                        user.email as string, 
+                        user.image as string
+                    )
+                }
+                return true
+            }
+            catch(error: any){
+                console.log(error)
+                return false;
+            }
+        }
+    }
 }
 
 export async function getCurrentUser() {
