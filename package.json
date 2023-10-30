@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "grafbase": "npx grafbase@0.24 dev"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
     "@types/jsonwebtoken": "^9.0.4",
     "cloudinary": "^1.41.0",
+    "grafbase": "^0.24.1",
     "graphql-request": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "next": "14.0.0",
